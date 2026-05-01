@@ -1,5 +1,5 @@
-Directed
 62586 147892
+directed
 0	1
 0	2
 0	3
