@@ -162,11 +162,43 @@ public:
 		total_time += (double)interval.count();
 		cout << "time:" << interval.count() << endl;
 
+		// Output the best result (original behavior)
 		g.reset_pro();
 		g.Delete_Node(g.seedSet);
 		double inf2 = g.MC_based_estimate(g.rumorSet, 100000);
 		double inf3 = inf1 - inf2;
-		of << inf1 << "\t" <<  inf2 << "\t" << inf3 << "\t" << (double)interval.count() <<  endl;
+		of << "BEST\t" << inf1 << "\t" <<  inf2 << "\t" << inf3 << "\t" << (double)interval.count() <<  endl;
+		cout << "Best result: spread_before=" << inf1 << " spread_after=" << inf2 << " saved=" << inf3 << endl;
+
+		// Output separate lower bound result
+		if (arg.algo == "SandIMIN" && g.LB_seedSet.size() > 0) {
+			g.reset_pro();
+			g.Delete_Node(g.LB_seedSet);
+			double inf2_lb = g.MC_based_estimate(g.rumorSet, 100000);
+			double inf3_lb = inf1 - inf2_lb;
+			of << "LB\t" << inf1 << "\t" << inf2_lb << "\t" << inf3_lb << "\t" << (double)interval.count() << endl;
+			cout << "Lower bound: spread_after=" << inf2_lb << " saved=" << inf3_lb << endl;
+		}
+
+		// Output separate upper bound result
+		if (arg.algo == "SandIMIN" && g.UB_seedSet.size() > 0) {
+			g.reset_pro();
+			g.Delete_Node(g.UB_seedSet);
+			double inf2_ub = g.MC_based_estimate(g.rumorSet, 100000);
+			double inf3_ub = inf1 - inf2_ub;
+			of << "UB\t" << inf1 << "\t" << inf2_ub << "\t" << inf3_ub << "\t" << (double)interval.count() << endl;
+			cout << "Upper bound: spread_after=" << inf2_ub << " saved=" << inf3_ub << endl;
+		}
+
+		// Output heuristic (original) result
+		if (arg.algo == "SandIMIN" && g.Or_seedSet.size() > 0) {
+			g.reset_pro();
+			g.Delete_Node(g.Or_seedSet);
+			double inf2_or = g.MC_based_estimate(g.rumorSet, 100000);
+			double inf3_or = inf1 - inf2_or;
+			of << "OR\t" << inf1 << "\t" << inf2_or << "\t" << inf3_or << "\t" << (double)interval.count() << endl;
+			cout << "Heuristic: spread_after=" << inf2_or << " saved=" << inf3_or << endl;
+		}
 
 		of.close();
 	}
