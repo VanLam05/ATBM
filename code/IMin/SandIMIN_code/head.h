@@ -163,7 +163,7 @@ void timer_init(string arg="default"){
     __head_h_start[arg]=ts;
 }
 int64 timer_elapse(string arg="default"){ // unit ms
-    cout << "fuck " <<endl;
+    // timer elapsed
     struct timeval now;
     gettimeofday(&now,NULL);
     int64 sec=now.tv_sec-__head_h_start[arg].tv_sec;

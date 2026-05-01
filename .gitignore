@@ -1,1 +1,23 @@
 .DS_Store
+
+# Compiled binaries
+*.o
+*.out
+code/AdvancedGreedy/ag
+code/AdvancedGreedy/experiment
+code/IMin/prepare_dataset
+code/IMin/SandIMIN_code/IMIN
+
+# Generated datasets for IMin
+code/IMin/SandIMIN_code/dataset/p2p-Gnutella31/
+code/IMin/SandIMIN_code/dataset/email-EuAll/
+code/IMin/SandIMIN_code/dataset/com-dblp/
+code/IMin/SandIMIN_code/dataset/com-youtube/
+
+# Results and logs
+code/results/
+*.log
+experiment_results.txt
+
+# Generated seed files
+datasets/*_seed_*.txt
