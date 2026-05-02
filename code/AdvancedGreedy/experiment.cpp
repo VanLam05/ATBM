@@ -556,7 +556,7 @@ int main(int argc, char** argv) {
 
     if (datadir.empty()) {
         cerr << "Usage: ./experiment -datadir <datasets_dir> [-theta 100] [-mc 10000] [-log results.txt]" << endl;
-        return 1;
+        return 0;
     }
 
     // Dataset files
