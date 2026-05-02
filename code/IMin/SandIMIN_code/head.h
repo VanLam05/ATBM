@@ -61,7 +61,12 @@ typedef pair<double,double> dpair;
 #define S second
 
 #ifndef TIMES_PER_SEC
+#if defined(__x86_64__) || defined(__i386__)
 #define TIMES_PER_SEC (2393.910e6)
+#else
+// Non-x86: rdtsc fallback returns nanoseconds, so 1e9 ns per second
+#define TIMES_PER_SEC (1e9)
+#endif
 #endif
 
 
