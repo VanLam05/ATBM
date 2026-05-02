@@ -159,10 +159,9 @@ for name in "${DATASET_NAMES[@]}"; do
                 continue
             fi
 
+            EXIT_CODE=0
             timeout $TIME_LIMIT ./IMIN -dataset "$ds_dir" -k $k -rumorNum $s -algo SandIMIN \
-                -epsilon 0.2 -gamma 0.1 -beta 0.1 > /tmp/imin_run.log 2>&1
-
-            EXIT_CODE=$?
+                -epsilon 0.2 -gamma 0.1 -beta 0.1 > /tmp/imin_run.log 2>&1 || EXIT_CODE=$?
             if [ $EXIT_CODE -eq 124 ]; then
                 echo "  [TIMEOUT] IMin timed out after ${TIME_LIMIT}s"
                 echo "TIMEOUT	$name	k=$k	|S|=$s	timeLimit=${TIME_LIMIT}s" >> "$IMIN_LOG"
