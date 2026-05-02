@@ -42,8 +42,16 @@ g++ -O3 -std=c++17 -o prepare_dataset prepare_dataset.cpp
 echo "  Compiled prepare_dataset"
 
 cd "$SCRIPT_DIR/IMin/SandIMIN_code"
-g++ -O3 -o IMIN Sandwich.cpp sfmt/SFMT.c
-echo "  Compiled IMin (SandIMIN)"
+IMIN_COMPILED=1
+if g++ -O3 -o IMIN Sandwich.cpp sfmt/SFMT.c 2>/dev/null; then
+    echo "  Compiled IMin (SandIMIN)"
+elif g++ -O3 -std=c++17 -o IMIN Sandwich.cpp sfmt/SFMT.c -x c++ 2>/dev/null; then
+    echo "  Compiled IMin (SandIMIN) with c++17"
+else
+    echo "  [WARNING] IMin compilation failed - IMin experiments will be skipped"
+    echo "  Try: cd IMin/SandIMIN_code && g++ -O3 -o IMIN Sandwich.cpp sfmt/SFMT.c"
+    IMIN_COMPILED=0
+fi
 
 # -------------------------------------------------------
 # 2. Prepare datasets for IMin
@@ -111,6 +119,10 @@ cd "$SCRIPT_DIR/AdvancedGreedy"
 echo ""
 echo "=== Running IMin (SandIMIN) experiments ==="
 
+if [ "$IMIN_COMPILED" -eq 0 ]; then
+    echo "  [SKIP] IMin was not compiled successfully. Skipping IMin experiments."
+else
+
 IMIN_LOG="$RESULTS_DIR/imin_results.txt"
 echo "# IMin Experiment Results" > "$IMIN_LOG"
 echo "# $(date)" >> "$IMIN_LOG"
@@ -147,10 +159,9 @@ for name in "${DATASET_NAMES[@]}"; do
                 continue
             fi
 
+            EXIT_CODE=0
             timeout $TIME_LIMIT ./IMIN -dataset "$ds_dir" -k $k -rumorNum $s -algo SandIMIN \
-                -epsilon 0.2 -gamma 0.1 -beta 0.1 > /tmp/imin_run.log 2>&1
-
-            EXIT_CODE=$?
+                -epsilon 0.2 -gamma 0.1 -beta 0.1 > /tmp/imin_run.log 2>&1 || EXIT_CODE=$?
             if [ $EXIT_CODE -eq 124 ]; then
                 echo "  [TIMEOUT] IMin timed out after ${TIME_LIMIT}s"
                 echo "TIMEOUT	$name	k=$k	|S|=$s	timeLimit=${TIME_LIMIT}s" >> "$IMIN_LOG"
@@ -166,6 +177,8 @@ for name in "${DATASET_NAMES[@]}"; do
         done
     done
 done
+
+fi # end IMIN_COMPILED check
 
 echo ""
 echo "=== All experiments completed ==="

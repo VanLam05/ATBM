@@ -61,7 +61,12 @@ typedef pair<double,double> dpair;
 #define S second
 
 #ifndef TIMES_PER_SEC
+#if defined(__x86_64__) || defined(__i386__)
 #define TIMES_PER_SEC (2393.910e6)
+#else
+// Non-x86: rdtsc fallback returns nanoseconds, so 1e9 ns per second
+#define TIMES_PER_SEC (1e9)
+#endif
 #endif
 
 
@@ -124,24 +129,31 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
 
 
 #ifndef WIN32
+#if defined(__x86_64__) || defined(__i386__)
 #ifdef __CYGWIN__
-
 //CYGWIN
 uint64 rdtsc()
 {
     uint64 t0;
     asm volatile("rdtsc" : "=A"(t0));
     return t0;
-
 }
 #else
-//LINUX
+//LINUX x86
 uint64 rdtsc(void)
 {
     unsigned a, d;
-    //asm("cpuid");
     asm volatile("rdtsc" : "=a" (a), "=d" (d));
     return (((uint64)a) | (((uint64)d) << 32));
+}
+#endif
+#else
+// Non-x86 (Apple Silicon / ARM): use chrono as portable fallback
+uint64 rdtsc(void)
+{
+    auto now = std::chrono::high_resolution_clock::now();
+    auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+    return (uint64)ns;
 }
 #endif
 #endif
@@ -151,7 +163,7 @@ string nowStr(){
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
     char str[100];
-    sprintf(str,"%d_%d_%d_%d_%d_%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    snprintf(str, sizeof(str), "%d_%d_%d_%d_%d_%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     return string(str);
 }
 
@@ -180,8 +192,8 @@ int64 timer_elapse(string arg="default"){ // unit ms
 #endif
 
 
-static inline string &ltrim(string &s) { s.erase(s.begin(), find_if(s.begin(), s.end(), not1(ptr_fun<int, int>(isspace)))); return s; }
-static inline string &rtrim(string &s) { s.erase(find_if(s.rbegin(), s.rend(), not1(ptr_fun<int, int>(isspace))).base(), s.end()); return s; }
+static inline string &ltrim(string &s) { s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char c){ return !isspace(c); })); return s; }
+static inline string &rtrim(string &s) { s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char c){ return !isspace(c); }).base(), s.end()); return s; }
 static inline string &trim(string &s) { return ltrim(rtrim(s)); }
 string __n_variable(string t, int n){ t=t+','; int i=0; if(n) for(; i<SIZE(t)&&n; i++) if(t[i]==',') n--; n=i; for(;t[i]!=',';i++); t=t.substr(n, i-n); trim(t);if(t[0]=='"') return ""; return t+"="; }
 #define __expand_nv(x) __n_variable(t, x)<< t##x << " "
@@ -252,7 +264,7 @@ string currentTimestampStr() {
     time_t t = time(0);   // get time now
     struct tm * now = localtime( & t );
     char buf[1000];
-    sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d", now->tm_year+1900, now->tm_mon+1, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
+    snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d", now->tm_year+1900, now->tm_mon+1, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
     return string(buf);
 }
 
@@ -300,12 +312,12 @@ class Timer
             {
                 char str[100];
                 //sprintf(str,"%.6lf",timeUsed[i]/TIMES_PER_SEC );
-                sprintf(str,"%.6lf", timeUsed[i]/time);
+                snprintf(str, sizeof(str), "%.6lf", timeUsed[i]/time);
                 string s=str;
                 if ((int)s.size()<15) s=" "+s;
                 char t[100];
                 memset(t, 0, sizeof t);
-                sprintf(t,"Spend %s seconds on %s",s.c_str(), timeUsedDesc[i].c_str());
+                snprintf(t, sizeof(t), "Spend %s seconds on %s",s.c_str(), timeUsedDesc[i].c_str());
                 cout<< t << endl;
             }
         }
