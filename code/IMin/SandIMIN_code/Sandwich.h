@@ -5,6 +5,8 @@
 #include <ratio>
 #include <queue>
 #include <ctime>
+#include <random>
+#include <numeric>
 //#include "infgraph.h"
 #define e exp(1)
 #define c 2*(exp(1)-2)
@@ -37,6 +39,84 @@ private:
 
 public:
 	
+	static bool load_seed_file(const string& seed_file, InfGraph& g)
+	{
+		if (seed_file.empty())
+			return false;
+		ifstream inFile(seed_file);
+		if (!inFile.is_open())
+			return false;
+
+		int number;
+		while (inFile >> number)
+		{
+			if (number >= 0 && number < (int)g.n)
+			{
+				g.rumorSet.push_back(number);
+				g.isRumor[number] = true;
+			}
+		}
+		inFile.close();
+		return !g.rumorSet.empty();
+	}
+
+	static void generate_seed_file(const string& seed_file, InfGraph& g, int seed_num)
+	{
+		vector<int> indices(g.n);
+		iota(indices.begin(), indices.end(), 0);
+		partial_sort(indices.begin(),
+			indices.begin() + min(200, (int)g.n),
+			indices.end(),
+			[&](int a, int b) { return g.deg[a] > g.deg[b]; });
+
+		int topK = min(200, (int)g.n);
+		vector<int> top200(indices.begin(), indices.begin() + topK);
+		mt19937 rng(42);
+		shuffle(top200.begin(), top200.end(), rng);
+
+		int actualSeedNum = min(seed_num, topK);
+		ofstream fout(seed_file);
+		for (int i = 0; i < actualSeedNum; i++)
+			fout << top200[i] << "\n";
+		fout.close();
+	}
+
+	static void load_or_generate_rumor_set(InfGraph& g, Argument& arg)
+	{
+		g.rumorSet.clear();
+		fill(g.isRumor.begin(), g.isRumor.end(), false);
+
+		if (!arg.seedFile.empty() && load_seed_file(arg.seedFile, g))
+		{
+			cout << "Loaded " << g.rumorSet.size() << " seeds from " << arg.seedFile << endl;
+			g.isRumor[g.n] = true;
+			return;
+		}
+
+		string rumor_file = "";
+		if (!arg.dataset_dir.empty())
+			rumor_file = arg.dataset_dir + "rumorSet_" + to_string(arg.Rumor_num) + ".txt";
+
+		if (!rumor_file.empty() && load_seed_file(rumor_file, g))
+		{
+			cout << "Loaded " << g.rumorSet.size() << " seeds from " << rumor_file << endl;
+			g.isRumor[g.n] = true;
+			return;
+		}
+
+		if (arg.seedFile.empty())
+			arg.seedFile = arg.outputDir + "/" + arg.dataset_name + "_seed_node_" + to_string(arg.Rumor_num) + ".txt";
+
+		generate_seed_file(arg.seedFile, g, arg.Rumor_num);
+		if (!load_seed_file(arg.seedFile, g))
+		{
+			cerr << "Unable to load or generate seed file: " << arg.seedFile << endl;
+			exit(1);
+		}
+		cout << "Generated " << g.rumorSet.size() << " seeds, saved to " << arg.seedFile << endl;
+		g.isRumor[g.n] = true;
+	}
+
 
 	static void CP_based(InfGraph& g, Argument& arg)
 	{
@@ -46,24 +126,7 @@ public:
 
 		double total_spread = 0;
 		double total_time = 0;
-		string rumor_file;
-		rumor_file = arg.dataset + "rumorSet_" + to_string(arg.Rumor_num) + ".txt";
-		ifstream inFile(rumor_file);
-		if (inFile.is_open())
-		{
-			int number;
-			while (inFile >> number)
-			{
-				g.rumorSet.push_back(number);
-				g.isRumor[number] = true;
-			}
-			g.isRumor[g.n] = true;
-			inFile.close();
-		}
-		else
-		{
-			std::cerr << "Unable to open input file!" << std::endl;
-		}
+		load_or_generate_rumor_set(g, arg);
 		vector<int>CB;//out_neighbor set
 		vector<int>is_ON(g.n, 0);
 		for (int node : g.rumorSet)

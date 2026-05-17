@@ -54,7 +54,7 @@ public:
 	vector<bool> isSelect;
 	vector<int> Dec;
 
-    InfGraph(string folder, string graph_file): Graph(folder, graph_file)
+    InfGraph(string folder, string graph_file, bool common_format = false): Graph(folder, graph_file, common_format)
     {
         srand(time(NULL));
         sfmt_init_gen_rand(&sfmtSeed , rand());		
