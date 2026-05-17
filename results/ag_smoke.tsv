@@ -1,0 +1,2 @@
+AG	../../datasets/p2p-Gnutella31.txt	k=5	|S|=10	theta=10	spread_before=4280.39	spread_after=1504.6	saved=2775.8	time=0.692206s	blockers=5
+AG	../../datasets/p2p-Gnutella31.txt	k=100	|S|=10	theta=10	spread_before=4280.39	spread_after=105.856	saved=4174.54	time=8.87024s	blockers=100
