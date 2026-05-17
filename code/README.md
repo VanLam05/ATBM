@@ -30,6 +30,74 @@ p(u, v) = 1 / in_degree(v)
 
 Seed được sinh bằng cách chọn ngẫu nhiên từ top-200 node theo out-degree. Nên dùng `-seedFile` để mọi thuật toán dùng cùng một tập seed.
 
+## Run With A Fixed Seed Set
+
+Khi đã có tập seed sinh trước, không nên để từng lần chạy tự sinh seed mới. Hãy dùng lại cùng một file seed cho mọi cấu hình trên cùng dataset.
+
+### AdvancedGreedy / GreedyReplace
+
+AdvancedGreedy đọc seed cố định bằng tham số `-seedFile`.
+
+Ví dụ seed đã có:
+
+```text
+results/p2p-Gnutella31_seed_node_10.txt
+```
+
+macOS:
+
+```bash
+cd code/AdvancedGreedy
+./ag -dataset ../../datasets/p2p-Gnutella31.txt -k 100 -seedNum 10 -theta 100 -mc 10000 -algo AG -seedFile ../../results/p2p-Gnutella31_seed_node_10.txt -output ../../results/ag_results.tsv
+```
+
+Windows PowerShell:
+
+```powershell
+cd code\AdvancedGreedy
+.\ag.exe -dataset ..\..\datasets\p2p-Gnutella31.txt -k 100 -seedNum 10 -theta 100 -mc 10000 -algo AG -seedFile ..\..\results\p2p-Gnutella31_seed_node_10.txt -output ..\..\results\ag_results.tsv
+```
+
+Nếu file trong `-seedFile` tồn tại, chương trình sẽ load seed từ file đó. Nếu file chưa tồn tại, chương trình sẽ sinh seed mới và ghi ra file đó.
+
+### IMin / SandIMIN
+
+IMin không dùng tham số `-seedFile`. IMin đọc seed từ file:
+
+```text
+code/IMin/SandIMIN_code/dataset/<dataset-name>/rumorSet_<S>.txt
+```
+
+Trong đó `<S>` phải khớp với tham số `-rumorNum`.
+
+Ví dụ với `-rumorNum 10`, IMin sẽ đọc:
+
+```text
+code/IMin/SandIMIN_code/dataset/p2p-Gnutella31/rumorSet_10.txt
+```
+
+Nếu đã có seed cố định từ AdvancedGreedy ở `results/p2p-Gnutella31_seed_node_10.txt`, có thể copy nội dung đó sang `rumorSet_10.txt`.
+
+macOS:
+
+```bash
+cp results/p2p-Gnutella31_seed_node_10.txt code/IMin/SandIMIN_code/dataset/p2p-Gnutella31/rumorSet_10.txt
+
+cd code/IMin/SandIMIN_code
+./IMIN -dataset dataset/p2p-Gnutella31 -k 100 -rumorNum 10 -algo SandIMIN -epsilon 0.2 -gamma 0.1 -beta 0.1
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item results\p2p-Gnutella31_seed_node_10.txt code\IMin\SandIMIN_code\dataset\p2p-Gnutella31\rumorSet_10.txt -Force
+
+cd code\IMin\SandIMIN_code
+.\IMIN.exe -dataset dataset\p2p-Gnutella31 -k 100 -rumorNum 10 -algo SandIMIN -epsilon 0.2 -gamma 0.1 -beta 0.1
+```
+
+Lưu ý: file seed chỉ cần chứa mỗi node một dòng. Thứ tự node không ảnh hưởng tới tập seed.
+
 ## Build On macOS
 
 Yêu cầu:
