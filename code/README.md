@@ -1,77 +1,20 @@
-# Influence Minimization via Vertex Blocking
+# Influence Minimization via Node Blocking
 
-Implementation of algorithms for the **Influence Minimization (IMIN)** problem, based on the paper:
-> *"Minimizing the Influence of Misinformation via Vertex Blocking"* by Jiadong Xie et al., 2023.
+Repo này chứa các baseline cho bài toán Influence Minimization:
 
-## Algorithms
+| Algorithm | Code |
+|---|---|
+| AdvancedGreedy (AG) | `AdvancedGreedy/advanced_greedy.cpp` |
+| GreedyReplace (GR) | `AdvancedGreedy/advanced_greedy.cpp` |
+| IMin / SandIMIN | `IMin/SandIMIN_code/` |
 
-| Algorithm | Description | Code |
-|---|---|---|
-| **AdvancedGreedy (AG)** | Uses Monte Carlo sampling + dominator tree to efficiently compute spread decrease | `AdvancedGreedy/advanced_greedy.cpp` |
-| **GreedyReplace (GR)** | Greedily selects out-neighbors, then iteratively replaces with better blockers | `AdvancedGreedy/advanced_greedy.cpp` |
-| **IMin (SandIMIN)** | Sandwich approximation strategy using RR-sets | `IMin/SandIMIN_code/` |
-
-## Build
-
-```bash
-# Build all
-bash run_experiments.sh small   # compiles + quick test
-bash run_experiments.sh full    # compiles + full experiment
-
-# Or compile individually:
-cd AdvancedGreedy && g++ -O3 -std=c++17 -o ag advanced_greedy.cpp
-cd AdvancedGreedy && g++ -O3 -std=c++17 -o experiment experiment.cpp
-cd IMin && g++ -O3 -std=c++17 -o prepare_dataset prepare_dataset.cpp
-cd IMin/SandIMIN_code && g++ -O3 -o IMIN Sandwich.cpp sfmt/SFMT.c
-```
-
-## Usage
-
-### AdvancedGreedy / GreedyReplace
-
-```bash
-./ag -dataset <path> -k <budget> -seedNum <|S|> -theta <#samples> -algo <AG|GR|BOTH>
-# Example:
-./ag -dataset ../../datasets/p2p-Gnutella31.txt -k 100 -seedNum 10 -theta 100 -algo BOTH
-```
-
-Parameters:
-- `-dataset`: Path to dataset file (format: `n m\n directed|undirected\n u v ...`)
-- `-k`: Blocking budget (default: 100)
-- `-seedNum`: Seed set size |S| (default: 10)
-- `-theta`: Number of sampled graphs for DecreaseESComputation (default: 100)
-- `-mc`: Monte Carlo rounds for spread estimation (default: 10000)
-- `-algo`: Algorithm to run: `AG`, `GR`, or `BOTH`
-- `-timeLimit`: Maximum time in seconds (default: 100000)
-
-### Experiment Runner
-
-```bash
-./experiment -datadir <datasets_dir> -theta 100 -mc 10000 -log results.txt
-```
-
-Runs experiments with:
-- k ∈ {100, 200, 300, 400, 500} with fixed |S|=10
-- |S| ∈ {10, 20, 30, 40, 50} with fixed k=100
-- Estimates runtime before each run; skips if > 1 day
-
-### IMin (SandIMIN)
-
-First prepare the dataset:
-```bash
-cd IMin
-./prepare_dataset -input ../../datasets/p2p-Gnutella31.txt -output SandIMIN_code/dataset/p2p-Gnutella31 -seedNum 50
-```
-
-Then run IMin:
-```bash
-cd IMin/SandIMIN_code
-./IMIN -dataset dataset/p2p-Gnutella31 -k 100 -rumorNum 10 -algo SandIMIN -epsilon 0.2 -gamma 0.1 -beta 0.1
-```
+Code đã được chỉnh để build được trên macOS và Windows. IMin không còn phụ thuộc `mmap`, `/proc/self/stat`, hoặc Unix-only headers khi build trên Windows.
 
 ## Dataset Format
 
-```
+Các dataset đầu vào chung nằm trong `datasets/` và có format:
+
+```text
 n m
 directed|undirected
 u1 v1
@@ -79,15 +22,252 @@ u2 v2
 ...
 ```
 
-Propagation model: Weighted Cascade (WC) with p(u,v) = 1/|N_in(v)|
+Xác suất cạnh dùng mô hình Weighted Cascade:
 
-## Datasets
+```text
+p(u, v) = 1 / in_degree(v)
+```
 
-| Dataset | Nodes | Edges | Type |
-|---|---|---|---|
-| p2p-Gnutella31 | 62,586 | 147,892 | Directed |
-| email-EuAll | 265,214 | 420,045 | Directed |
-| com-dblp | 317,080 | 1,049,866 | Undirected |
-| com-youtube | 1,134,890 | 2,987,624 | Undirected |
+Seed được sinh bằng cách chọn ngẫu nhiên từ top-200 node theo out-degree. Nên dùng `-seedFile` để mọi thuật toán dùng cùng một tập seed.
 
-Seeds: Randomly selected from top-200 nodes by out-degree.
+## Build On macOS
+
+Yêu cầu:
+
+- Xcode Command Line Tools hoặc Homebrew GCC/Clang.
+- Terminal đang đứng ở thư mục `code/`.
+
+Build từng chương trình:
+
+```bash
+cd AdvancedGreedy
+g++ -O3 -std=c++17 -o ag advanced_greedy.cpp
+g++ -O3 -std=c++17 -o experiment experiment.cpp
+
+cd ../IMin
+g++ -O3 -std=c++17 -o prepare_dataset prepare_dataset.cpp
+
+cd SandIMIN_code
+g++ -O3 -std=c++17 -o IMIN Sandwich.cpp sfmt/SFMT.c
+```
+
+Có thể chạy script tổng hợp trên macOS/Linux:
+
+```bash
+cd code
+bash run_experiments.sh small
+```
+
+`run_experiments.sh` là shell script, không dùng trực tiếp trên Windows PowerShell.
+
+## Build On Windows
+
+Cách khuyến nghị là dùng MSYS2 MinGW-w64.
+
+1. Cài MSYS2: https://www.msys2.org/
+2. Mở terminal `MSYS2 MinGW x64`.
+3. Cài compiler:
+
+```bash
+pacman -S --needed mingw-w64-x86_64-gcc
+```
+
+4. Đi tới thư mục `code/` của project, ví dụ:
+
+```bash
+cd /c/Users/<your-user>/path/to/ATBM/code
+```
+
+5. Build:
+
+```bash
+cd AdvancedGreedy
+g++ -O3 -std=c++17 -o ag.exe advanced_greedy.cpp
+g++ -O3 -std=c++17 -o experiment.exe experiment.cpp
+
+cd ../IMin
+g++ -O3 -std=c++17 -o prepare_dataset.exe prepare_dataset.cpp
+
+cd SandIMIN_code
+g++ -O3 -std=c++17 -o IMIN.exe Sandwich.cpp sfmt/SFMT.c -lpsapi
+```
+
+Ghi chú:
+
+- `-lpsapi` cần cho phần đo memory trên Windows.
+- Nếu dùng PowerShell thay vì MSYS2 shell, hãy dùng đường dẫn Windows như `..\..\datasets\p2p-Gnutella31.txt`.
+- MSVC chưa phải target chính của repo này; dùng MinGW-w64 để tránh khác biệt compiler với mã gốc của SandIMIN.
+
+## Prepare Dataset For IMin
+
+IMin cần thư mục dataset riêng gồm `attribute.txt`, `graph.txt`, `graph_ic.inf`, và `rumorSet_<S>.txt`.
+
+macOS:
+
+```bash
+cd code/IMin
+./prepare_dataset -input ../../datasets/p2p-Gnutella31.txt -output SandIMIN_code/dataset/p2p-Gnutella31 -seedNum 50
+```
+
+Windows MSYS2:
+
+```bash
+cd code/IMin
+./prepare_dataset.exe -input ../../datasets/p2p-Gnutella31.txt -output SandIMIN_code/dataset/p2p-Gnutella31 -seedNum 50
+```
+
+Windows PowerShell:
+
+```powershell
+cd code\IMin
+.\prepare_dataset.exe -input ..\..\datasets\p2p-Gnutella31.txt -output SandIMIN_code\dataset\p2p-Gnutella31 -seedNum 50
+```
+
+## Run AdvancedGreedy / GreedyReplace
+
+macOS:
+
+```bash
+cd code/AdvancedGreedy
+./ag -dataset ../../datasets/p2p-Gnutella31.txt -k 100 -seedNum 10 -theta 100 -mc 10000 -algo AG -seedFile ../../results/p2p-Gnutella31_seed_node_10.txt -output ../../results/ag_results.tsv
+```
+
+Windows MSYS2:
+
+```bash
+cd code/AdvancedGreedy
+./ag.exe -dataset ../../datasets/p2p-Gnutella31.txt -k 100 -seedNum 10 -theta 100 -mc 10000 -algo AG -seedFile ../../results/p2p-Gnutella31_seed_node_10.txt -output ../../results/ag_results.tsv
+```
+
+Windows PowerShell:
+
+```powershell
+cd code\AdvancedGreedy
+.\ag.exe -dataset ..\..\datasets\p2p-Gnutella31.txt -k 100 -seedNum 10 -theta 100 -mc 10000 -algo AG -seedFile ..\..\results\p2p-Gnutella31_seed_node_10.txt -output ..\..\results\ag_results.tsv
+```
+
+Tham số chính:
+
+| Parameter | Meaning |
+|---|---|
+| `-dataset` | Dataset format chung |
+| `-k` | Số node cần chặn |
+| `-seedNum` | Kích thước tập seed `|S|` |
+| `-theta` | Số sampled graph cho AG/GR |
+| `-mc` | Số Monte Carlo rounds để estimate spread |
+| `-algo` | `AG`, `GR`, hoặc `BOTH` |
+| `-seedFile` | File seed dùng chung |
+| `-output` | File ghi kết quả dạng TSV |
+| `-timeLimit` | Giới hạn thời gian, đơn vị giây |
+
+## Run IMin / SandIMIN
+
+macOS:
+
+```bash
+cd code/IMin/SandIMIN_code
+mkdir -p results
+./IMIN -dataset dataset/p2p-Gnutella31 -k 100 -rumorNum 10 -algo SandIMIN -epsilon 0.2 -gamma 0.1 -beta 0.1
+```
+
+Windows MSYS2:
+
+```bash
+cd code/IMin/SandIMIN_code
+mkdir -p results
+./IMIN.exe -dataset dataset/p2p-Gnutella31 -k 100 -rumorNum 10 -algo SandIMIN -epsilon 0.2 -gamma 0.1 -beta 0.1
+```
+
+Windows PowerShell:
+
+```powershell
+cd code\IMin\SandIMIN_code
+New-Item -ItemType Directory -Force results
+.\IMIN.exe -dataset dataset\p2p-Gnutella31 -k 100 -rumorNum 10 -algo SandIMIN -epsilon 0.2 -gamma 0.1 -beta 0.1
+```
+
+IMin ghi kết quả vào:
+
+```text
+code/IMin/SandIMIN_code/results/
+```
+
+Các dòng kết quả chính:
+
+| Label | Meaning |
+|---|---|
+| `BEST` | Kết quả tốt nhất mà SandIMIN chọn |
+| `LB` | Candidate lower-bound |
+| `UB` | Candidate upper-bound |
+| `OR` | Degree-based heuristic |
+
+## Run Experiment Runner
+
+`experiment` chạy AG và GR trên các dataset trong `datasets/`.
+
+macOS:
+
+```bash
+cd code/AdvancedGreedy
+./experiment -datadir ../../datasets -theta 100 -mc 10000 -timeLimit 100000 -log ../../results/ag_gr_results.tsv
+```
+
+Windows MSYS2:
+
+```bash
+cd code/AdvancedGreedy
+./experiment.exe -datadir ../../datasets -theta 100 -mc 10000 -timeLimit 100000 -log ../../results/ag_gr_results.tsv
+```
+
+Windows PowerShell:
+
+```powershell
+cd code\AdvancedGreedy
+.\experiment.exe -datadir ..\..\datasets -theta 100 -mc 10000 -timeLimit 100000 -log ..\..\results\ag_gr_results.tsv
+```
+
+Experiment mặc định:
+
+- Vary `k = 100, 200, 300, 400, 500` với `|S| = 10`.
+- Vary `|S| = 10, 20, 30, 40, 50` với `k = 100`.
+- Tự skip nếu ước lượng runtime lớn hơn 1 ngày.
+
+## Suggested Smoke Test
+
+macOS:
+
+```bash
+mkdir -p results
+
+cd code/AdvancedGreedy
+./ag -dataset ../../datasets/p2p-Gnutella31.txt -k 1 -seedNum 10 -theta 2 -mc 20 -algo AG -seedFile ../../results/p2p-Gnutella31_seed_node_10.txt
+
+cd ../IMin
+./prepare_dataset -input ../../datasets/p2p-Gnutella31.txt -output SandIMIN_code/dataset/p2p-Gnutella31 -seedNum 50
+
+cd SandIMIN_code
+mkdir -p results
+./IMIN -dataset dataset/p2p-Gnutella31 -k 1 -rumorNum 10 -algo SandIMIN -epsilon 0.2 -gamma 0.1 -beta 0.1
+```
+
+Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force results
+
+cd code\AdvancedGreedy
+.\ag.exe -dataset ..\..\datasets\p2p-Gnutella31.txt -k 1 -seedNum 10 -theta 2 -mc 20 -algo AG -seedFile ..\..\results\p2p-Gnutella31_seed_node_10.txt
+
+cd ..\IMin
+.\prepare_dataset.exe -input ..\..\datasets\p2p-Gnutella31.txt -output SandIMIN_code\dataset\p2p-Gnutella31 -seedNum 50
+
+cd SandIMIN_code
+New-Item -ItemType Directory -Force results
+.\IMIN.exe -dataset dataset\p2p-Gnutella31 -k 1 -rumorNum 10 -algo SandIMIN -epsilon 0.2 -gamma 0.1 -beta 0.1
+```
+
+## Notes
+
+- Dataset lớn như `com-youtube` có thể chạy rất lâu.
+- Để so sánh công bằng, giữ nguyên cùng `seedFile`/`rumorSet_<S>.txt` cho mọi thuật toán trên cùng dataset.
+- `results/` ở repo root dùng cho báo cáo tổng hợp. IMin vẫn ghi raw output trong `code/IMin/SandIMIN_code/results/`.

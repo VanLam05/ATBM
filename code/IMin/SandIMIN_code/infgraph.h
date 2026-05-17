@@ -103,23 +103,17 @@ public:
 
 	char* map_file(const char* fname, size_t& length)
 	{
-		int fd = open(fname, O_RDONLY);
-		if (fd == -1)
+		ifstream fin(fname, ios::binary | ios::ate);
+		if (!fin.is_open())
 			handle_error("open");
-
-		// obtain file size
-		struct stat sb;
-		if (fstat(fd, &sb) == -1)
-			handle_error("fstat");
-
-		length = sb.st_size;
-
-		char* addr = static_cast<char*>(mmap(NULL, length, PROT_READ, MAP_PRIVATE, fd, 0u));
-		if (addr == MAP_FAILED)
-			handle_error("mmap");
-
-		// TODO close fd at some point in time, call munmap(...)
-		close(fd);
+		streamsize size = fin.tellg();
+		if (size < 0)
+			handle_error("tellg");
+		length = static_cast<size_t>(size);
+		fin.seekg(0, ios::beg);
+		char* addr = new char[length];
+		if (!fin.read(addr, size))
+			handle_error("read");
 		return addr;
 	}
 	double MC_based_estimate(vector<int> rumorNode, int count)

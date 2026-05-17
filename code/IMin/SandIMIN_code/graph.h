@@ -47,31 +47,21 @@ public:
 
     void readGraph()
     {
-		size_t length;
-		int fd = open((graph_file).c_str(), O_RDWR);
-		if (fd == -1)
-			handle_error("open");
-		struct stat sb;
-		int rc = fstat(fd, &sb);
-		if (rc == -1)
-			handle_error("fstat");
+        ifstream fin(graph_file, ios::binary);
+        if (!fin.is_open())
+            handle_error("open graph_ic.inf");
 
-		length = sb.st_size;
-		auto ptr = static_cast<char*>(mmap(NULL, length, PROT_READ, MAP_PRIVATE, fd, 0u));  //byte by byte
-		auto f = ptr;
-
-		int gap = 2 * sizeof(int) + sizeof(double);
-        //ASSERT(fin != false);
         unsigned int readCnt = 0;
         for (unsigned int i = 0; i < m; i++)
         {
             readCnt ++;
             unsigned int a, b;
             double p;
-			memcpy(&a, f, sizeof(int));
-			memcpy(&b, f + sizeof(int), sizeof(int));
-			memcpy(&p, f + 2 * sizeof(int), sizeof(double));
-			f += gap;
+            fin.read(reinterpret_cast<char*>(&a), sizeof(int));
+            fin.read(reinterpret_cast<char*>(&b), sizeof(int));
+            fin.read(reinterpret_cast<char*>(&p), sizeof(double));
+            if (!fin)
+                handle_error("read graph_ic.inf");
 
             ASSERT( a < n );
             ASSERT( b < n );
@@ -87,8 +77,7 @@ public:
         }        
 
         ASSERT(readCnt == m);
-		rc = munmap(ptr, length);
-		close(fd);
+        fin.close();
         
     }
 

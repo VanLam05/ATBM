@@ -1,6 +1,9 @@
 #ifndef __HEAD_H__
 #define __HEAD_H__
 
+#if defined(_WIN32) && !defined(WIN32)
+#define WIN32
+#endif
 
 
 #ifdef DEBUG_INFO
@@ -12,6 +15,8 @@ this_is_deprecated
 
 
 #if defined(WIN32)
+#include <winsock2.h>
+#include <windows.h>
 #elif defined(__CYGWIN__) // cygwin
 #include <sys/time.h>
 #else //linux
@@ -45,9 +50,11 @@ this_is_deprecated
 #include <chrono>
 #include <ctime>
 #include <ratio>
+#if !defined(WIN32)
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#endif
 
 using namespace std;
 typedef unsigned int uint;
@@ -79,7 +86,6 @@ typedef unsigned long long uint64;
 
 #ifdef WIN32
 #include < time.h >
-#include <windows.h> //I've ommited this line.
 #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
 #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
 #else
@@ -128,7 +134,14 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
 #endif
 
 
-#ifndef WIN32
+#ifdef WIN32
+uint64 rdtsc(void)
+{
+    auto now = std::chrono::high_resolution_clock::now();
+    auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+    return (uint64)ns;
+}
+#else
 #if defined(__x86_64__) || defined(__i386__)
 #ifdef __CYGWIN__
 //CYGWIN
@@ -185,11 +198,7 @@ int64 timer_elapse(string arg="default"){ // unit ms
 #define SIZE(t) (int)(t.size())
 #define ALL(t) (t).begin(), (t).end()
 #define FOR(i,n) for(int (i)=0; (i)<((int)(n)); (i)++)
-#ifdef WIN32
-#define FORE(i, x) for (typeid((x).begin()) i = (x).begin(); (i) != (x).end(); (i)++)
-#else
-#define FORE(i, x) for (__typeof((x).begin()) i = (x).begin(); (i) != (x).end(); (i)++)
-#endif
+#define FORE(i, x) for (auto i = (x).begin(); (i) != (x).end(); (i)++)
 
 
 static inline string &ltrim(string &s) { s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char c){ return !isspace(c); })); return s; }
@@ -352,7 +361,11 @@ int Counter::cnt[1000]={0};
 
 // return the output of the command by string
 string exec(const char* cmd) {
+#ifdef WIN32
+    FILE* pipe = _popen(cmd, "r");
+#else
     FILE* pipe = popen(cmd, "r");
+#endif
     if (!pipe) return "ERROR";
     char buffer[128];
     std::string result = "";
@@ -360,7 +373,11 @@ string exec(const char* cmd) {
         if(fgets(buffer, 128, pipe) != NULL)
             result += buffer;
     }
+#ifdef WIN32
+    _pclose(pipe);
+#else
     pclose(pipe);
+#endif
     return result;
 }
 string getIpAddress(){

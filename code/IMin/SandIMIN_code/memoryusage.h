@@ -1,8 +1,13 @@
-#include <unistd.h>
 #include <ios>
 #include <iostream>
 #include <fstream>
 #include <string>
+#if defined(_WIN32)
+#include <windows.h>
+#include <psapi.h>
+#else
+#include <unistd.h>
+#endif
 
 using namespace std;
 
@@ -24,6 +29,13 @@ void process_mem_usage(double& vm_usage, double& resident_set){
    vm_usage     = 0.0;
    resident_set = 0.0;
 
+#if defined(_WIN32)
+   PROCESS_MEMORY_COUNTERS info;
+   if (GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info))) {
+      vm_usage = info.PagefileUsage / 1024.0;
+      resident_set = info.WorkingSetSize / 1024.0;
+   }
+#else
    // 'file' stat seems to give the most reliable results
    //
    ifstream stat_stream("/proc/self/stat",ios_base::in);
@@ -50,6 +62,7 @@ void process_mem_usage(double& vm_usage, double& resident_set){
    long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
    vm_usage     = vsize / 1024.0;
    resident_set = rss * page_size_kb;
+#endif
 }
 
 void disp_mem_usage(){
