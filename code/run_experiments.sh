@@ -18,7 +18,7 @@ set -e
 MODE=${1:-full}
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DATA_DIR="$SCRIPT_DIR/../datasets"
-RESULTS_DIR="$SCRIPT_DIR/results"
+RESULTS_DIR="$SCRIPT_DIR/../results"
 mkdir -p "$RESULTS_DIR"
 
 echo "=== Mode: $MODE ==="
@@ -54,29 +54,16 @@ else
 fi
 
 # -------------------------------------------------------
-# 2. Prepare datasets for IMin
+# 2. Dataset preparation note
 # -------------------------------------------------------
 echo ""
-echo "=== Preparing datasets for IMin ==="
+echo "=== Dataset preparation ==="
 
 DATASETS=("p2p-Gnutella31.txt" "email-EuAll.txt" "com-dblp.ungraph.txt" "com-youtube.ungraph.txt")
 DATASET_NAMES=("p2p-Gnutella31" "email-EuAll" "com-dblp" "com-youtube")
 
-cd "$SCRIPT_DIR/IMin"
-for i in "${!DATASETS[@]}"; do
-    ds="${DATASETS[$i]}"
-    name="${DATASET_NAMES[$i]}"
-    if [ -f "$DATA_DIR/$ds" ]; then
-        if [ ! -f "SandIMIN_code/dataset/$name/graph_ic.inf" ]; then
-            echo "  Preparing $name..."
-            ./prepare_dataset -input "$DATA_DIR/$ds" -output "SandIMIN_code/dataset/$name" -seedNum 50
-        else
-            echo "  $name already prepared"
-        fi
-    else
-        echo "  [SKIP] $ds not found"
-    fi
-done
+echo "  IMin now reads the common dataset files directly from $DATA_DIR"
+echo "  prepare_dataset is kept only for legacy SandIMIN-format runs."
 
 # -------------------------------------------------------
 # 3. Set parameters
@@ -131,10 +118,13 @@ cd "$SCRIPT_DIR/IMin/SandIMIN_code"
 
 DAY_LIMIT=86400
 
-for name in "${DATASET_NAMES[@]}"; do
-    ds_dir="dataset/$name"
-    if [ ! -f "$ds_dir/graph_ic.inf" ]; then
-        echo "  [SKIP] $name: graph_ic.inf not found"
+for i in "${!DATASETS[@]}"; do
+    ds="${DATASETS[$i]}"
+    name="${DATASET_NAMES[$i]}"
+    ds_path="$DATA_DIR/$ds"
+    seed_base="${ds%.*}"
+    if [ ! -f "$ds_path" ]; then
+        echo "  [SKIP] $name: dataset file not found at $ds_path"
         continue
     fi
 
@@ -144,11 +134,12 @@ for name in "${DATASET_NAMES[@]}"; do
     for k in $K_VALUES; do
         for s in $S_VALUES; do
             echo "  Running IMin: k=$k |S|=$s on $name"
+            seed_file="$DATA_DIR/${seed_base}_seed_${s}.txt"
 
             # Estimate time with small run first
             START_TIME=$(date +%s)
-            timeout 30 ./IMIN -dataset "$ds_dir" -k 1 -rumorNum $s -algo SandIMIN \
-                -epsilon 0.2 -gamma 0.1 -beta 0.1 > /tmp/imin_est.log 2>&1 || true
+            timeout 30 ./IMIN -dataset "$ds_path" -k 1 -rumorNum $s -algo SandIMIN \
+                -epsilon 0.2 -gamma 0.1 -beta 0.1 -seedFile "$seed_file" -outputDir "$RESULTS_DIR" > /tmp/imin_est.log 2>&1 || true
             END_TIME=$(date +%s)
             EST_PER_ITER=$((END_TIME - START_TIME))
             EST_TOTAL=$((EST_PER_ITER * k))
@@ -160,8 +151,8 @@ for name in "${DATASET_NAMES[@]}"; do
             fi
 
             EXIT_CODE=0
-            timeout $TIME_LIMIT ./IMIN -dataset "$ds_dir" -k $k -rumorNum $s -algo SandIMIN \
-                -epsilon 0.2 -gamma 0.1 -beta 0.1 > /tmp/imin_run.log 2>&1 || EXIT_CODE=$?
+            timeout $TIME_LIMIT ./IMIN -dataset "$ds_path" -k $k -rumorNum $s -algo SandIMIN \
+                -epsilon 0.2 -gamma 0.1 -beta 0.1 -seedFile "$seed_file" -outputDir "$RESULTS_DIR" > /tmp/imin_run.log 2>&1 || EXIT_CODE=$?
             if [ $EXIT_CODE -eq 124 ]; then
                 echo "  [TIMEOUT] IMin timed out after ${TIME_LIMIT}s"
                 echo "TIMEOUT	$name	k=$k	|S|=$s	timeLimit=${TIME_LIMIT}s" >> "$IMIN_LOG"
@@ -171,14 +162,20 @@ for name in "${DATASET_NAMES[@]}"; do
                 echo "---" >> "$IMIN_LOG"
             fi
 
-            # Copy results file
-            RES_FILE="results/res_${name}_|S|=${s}_K=${k}_epsilon=*"
-            cp $RES_FILE "$RESULTS_DIR/" 2>/dev/null || true
+            # IMin writes directly to $RESULTS_DIR via -outputDir.
         done
     done
 done
 
 fi # end IMIN_COMPILED check
+
+# -------------------------------------------------------
+# 6. Generate table-ready summaries
+# -------------------------------------------------------
+echo ""
+echo "=== Generating table-ready CSV summaries ==="
+cd "$SCRIPT_DIR"
+python3 summarize_results.py --results "$RESULTS_DIR"
 
 echo ""
 echo "=== All experiments completed ==="
@@ -186,3 +183,6 @@ echo "Results saved in: $RESULTS_DIR/"
 echo "  - ag_gr_results.txt: AdvancedGreedy / GreedyReplace results"
 echo "  - ag_gr_console.log: AG/GR console output"
 echo "  - imin_results.txt: IMin results"
+echo "  - table_k_saved.csv / table_k_time.csv: tables for varying k"
+echo "  - table_s_saved.csv / table_s_time.csv: tables for varying |S|"
+echo "  - table_approx_ratio.csv: approximation-ratio table when available"

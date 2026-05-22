@@ -1,0 +1,2 @@
+algorithm	dataset	k	|S|	result_type	spread_before	spread_after	saved_nodes	time_seconds	approx_ratio	status
+SandIMIN	p2p-Gnutella31	400	10	BEST	4304.29	10	4294.29	1.666e-06	NA	OK

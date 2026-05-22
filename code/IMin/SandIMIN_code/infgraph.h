@@ -3,6 +3,7 @@
 #include <utility>  // pair
 #include <numeric>
 #include <algorithm>
+#include <chrono>
 class InfGraph: public Graph
 {
 private:
@@ -47,6 +48,9 @@ public:
 	vector<int> LB_seedSet;
 	vector<int> Or_seedSet;
 	vector<int> seedSet;
+	double last_lb_time_seconds;
+	double last_ub_time_seconds;
+	double last_ub_approx_ratio;
 	vector<int> rumorSet;
 	vector<int> ReachableNode;
 	vector<bool> isReach;
@@ -67,6 +71,9 @@ public:
 		influenced_deg = vector<double>(n + 1, 0);
 		isSelect = vector<bool>(n+1);
 		isReach = vector<bool>(n + 1);
+		last_lb_time_seconds = 0.0;
+		last_ub_time_seconds = 0.0;
+		last_ub_approx_ratio = -1.0;
 		//activated = vector<bool>(n, false);
 		hyperG.resize(n+1, vector<int>());
 		LhyperG.resize(n + 1, vector<int>());
@@ -853,7 +860,11 @@ public:
 		long long subCP_num2 = 0;
 		cout << numRbase << " __ " << maxNumR << endl;
 		//int Uflag = 0, Lflag = 0;
-		int opim_num;
+		int opim_num = 0;
+		last_lb_time_seconds = 0.0;
+		last_ub_time_seconds = 0.0;
+		last_ub_approx_ratio = -1.0;
+		auto opimc_start_time = std::chrono::high_resolution_clock::now();
 		for (auto idx = 0; idx < numIter; idx++)
 		{
 			//generate sample phase
@@ -888,6 +899,7 @@ public:
 					cout << "RR_num of lower bound:" << numR << " max_num:" << maxNumR << endl;
 					Lflag = 1;
 					opim_num = numR;
+					last_lb_time_seconds = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - opimc_start_time).count();
 					disp_mem_usage();
 					relax_memory(hyperG);
 					relax_memory(hyperGT);
@@ -911,11 +923,14 @@ public:
 				
 
 				auto approxOPIMC = lowerSelect / upperOPT;
+				last_ub_approx_ratio = approxOPIMC * (approx - epsilon);
 				cout << "upper ratio:" << approxOPIMC << endl;
+				cout << "upper approx_ratio:" << last_ub_approx_ratio << endl;
 				if (approxOPIMC >= approx - epsilon)
 				{
 					cout << "RR_num of upper bound: " << numR << endl;
 					Uflag = 1;
+					last_ub_time_seconds = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - opimc_start_time).count();
 				}
 			}
 			if (Uflag == 1 && Lflag == 1)

@@ -1,0 +1,5 @@
+algorithm	dataset	k	|S|	result_type	spread_before	spread_after	saved_nodes	time_seconds	approx_ratio	status
+SandIMIN	p2p-Gnutella31	100	30	BEST	6931.88	1177.26	5754.62	187.007	NA	OK
+SandIMIN	p2p-Gnutella31	100	30	LB	6931.88	1175.58	5756.3	79.0908	NA	OK
+SandIMIN	p2p-Gnutella31	100	30	UB	6931.88	2327.06	4604.82	179.781	0.189738	OK
+SandIMIN	p2p-Gnutella31	100	30	OR	6931.88	1680.54	5251.34	0.00431596	NA	OK

@@ -7,6 +7,8 @@
 #include <ctime>
 #include <random>
 #include <numeric>
+#include <sstream>
+#include <iomanip>
 //#include "infgraph.h"
 #define e exp(1)
 #define c 2*(exp(1)-2)
@@ -117,6 +119,42 @@ public:
 		g.isRumor[g.n] = true;
 	}
 
+	static void write_result_header_if_needed(const Argument& arg)
+	{
+		ifstream fin(arg.res);
+		bool needs_header = !fin.good() || fin.peek() == ifstream::traits_type::eof();
+		fin.close();
+		if (needs_header)
+		{
+			ofstream header(arg.res, ios::app);
+			header << "algorithm\tdataset\tk\t|S|\tresult_type\tspread_before\tspread_after\tsaved_nodes\ttime_seconds\tapprox_ratio\tstatus" << endl;
+			header.close();
+		}
+	}
+
+	static void write_result_row(ofstream& of, const Argument& arg, const string& result_type,
+		double spread_before, double spread_after, double saved_nodes, double time_seconds,
+		const string& approx_ratio = "NA", const string& status = "OK")
+	{
+		of << arg.algo << "\t" << arg.dataset_name << "\t" << arg.k << "\t" << arg.Rumor_num
+		   << "\t" << result_type
+		   << "\t" << spread_before
+		   << "\t" << spread_after
+		   << "\t" << saved_nodes
+		   << "\t" << time_seconds
+		   << "\t" << approx_ratio
+		   << "\t" << status << endl;
+	}
+
+	static string format_ratio(double ratio)
+	{
+		if (ratio < 0)
+			return "NA";
+		ostringstream oss;
+		oss << fixed << setprecision(6) << ratio;
+		return oss.str();
+	}
+
 
 	static void CP_based(InfGraph& g, Argument& arg)
 	{
@@ -141,6 +179,7 @@ public:
 				}
 			}
 		}
+		write_result_header_if_needed(arg);
 		ofstream of(arg.res, ios::app);
 		g.init_hyper_graph();
 		double inf1 = g.MC_based_estimate(g.rumorSet, 10000);
@@ -148,6 +187,10 @@ public:
 		g.get_reachable_node(g.Rnode);
 		cout << "reachable node size: " << g.Rnode.size() << endl;
 		high_resolution_clock::time_point startTime = high_resolution_clock::now();
+		double lb_time_seconds = 0.0;
+		double ub_time_seconds = 0.0;
+		double or_time_seconds = 0.0;
+		double best_time_seconds = 0.0;
 		int CPnum = 10000;
 		if (arg.algo == "SandIMIN")
 		{
@@ -167,8 +210,15 @@ public:
 				cout << "estimate influence by StopAlgorithm is: " << inf << endl;
 				double OPT_LB = g.calculate_OPT_lower(arg.k, CB);
 
+				high_resolution_clock::time_point opimcStartTime = high_resolution_clock::now();
 				g.opimc_sandwich(arg.k, arg.epsilon, 1.0 / g.n, arg, inf, OPT_LB, 0, 0);
+				duration<double> common_before_opimc = duration_cast<duration<double>>(opimcStartTime - startTime);
+				lb_time_seconds = g.last_lb_time_seconds > 0 ? common_before_opimc.count() + g.last_lb_time_seconds : 0.0;
+				ub_time_seconds = g.last_ub_time_seconds > 0 ? common_before_opimc.count() + g.last_ub_time_seconds : 0.0;
+				high_resolution_clock::time_point orStartTime = high_resolution_clock::now();
 				g.deg_based_heuristic(arg.k, CB);
+				high_resolution_clock::time_point orEndTime = high_resolution_clock::now();
+				or_time_seconds = duration_cast<duration<double>>(orEndTime - orStartTime).count();
 				g.reset_pro();
 
 				double inf_upper = g.estimate_inf_byStop(g.rumorSet, g.UB_seedSet, arg.gamma, 1.0 / g.n);
@@ -179,12 +229,15 @@ public:
 
 				double inf_or = g.estimate_inf_byStop(g.rumorSet, g.Or_seedSet, arg.gamma, 1.0 / g.n);
 				cout << "orginal's influence:" << inf_or << endl;
-				if (inf_upper <= inf_lower && inf_upper <= inf_or)
+				if (inf_upper <= inf_lower && inf_upper <= inf_or) {
 					g.seedSet = g.UB_seedSet;
-				else if (inf_lower <= inf_upper && inf_lower <= inf_or)
+				}
+				else if (inf_lower <= inf_upper && inf_lower <= inf_or) {
 					g.seedSet = g.LB_seedSet;
-				else if (inf_or <= inf_lower && inf_or <= inf_upper)
+				}
+				else if (inf_or <= inf_lower && inf_or <= inf_upper) {
 					g.seedSet = g.Or_seedSet;
+				}
 			}
 		}
 		else if (arg.algo == "SandIMIN-")
@@ -205,8 +258,12 @@ public:
 				double OPT_LB = g.calculate_OPT_lower(arg.k, CB);
 
 				g.opimc_sandwich(arg.k, arg.epsilon, 1.0 / g.n, arg, inf, OPT_LB, 1, 0);
+				lb_time_seconds = g.last_lb_time_seconds;
 				
+				high_resolution_clock::time_point orStartTime = high_resolution_clock::now();
 				g.deg_based_heuristic(arg.k, CB);
+				high_resolution_clock::time_point orEndTime = high_resolution_clock::now();
+				or_time_seconds = duration_cast<duration<double>>(orEndTime - orStartTime).count();
 				g.reset_pro();
 
 				double inf_lower = g.estimate_inf_byStop(g.rumorSet, g.LB_seedSet, arg.beta, 1.0 / g.n);
@@ -214,14 +271,17 @@ public:
 
 				double inf_or = g.estimate_inf_byStop(g.rumorSet, g.Or_seedSet, arg.beta, 1.0 / g.n);
 				cout << "orginal's influence:" << inf_or << endl;
-				if (inf_lower <= inf_or)
+				if (inf_lower <= inf_or) {
 					g.seedSet = g.LB_seedSet;
-				else
+				}
+				else {
 					g.seedSet = g.Or_seedSet;
+				}
 			}
 		}
 		high_resolution_clock::time_point endTime = high_resolution_clock::now();
 		duration<double> interval = duration_cast<duration<double>>(endTime - startTime);
+		best_time_seconds = interval.count();
 		total_time += (double)interval.count();
 		cout << "time:" << interval.count() << endl;
 
@@ -230,7 +290,7 @@ public:
 		g.Delete_Node(g.seedSet);
 		double inf2 = g.MC_based_estimate(g.rumorSet, 100000);
 		double inf3 = inf1 - inf2;
-		of << "BEST\t" << inf1 << "\t" <<  inf2 << "\t" << inf3 << "\t" << (double)interval.count() <<  endl;
+		write_result_row(of, arg, "BEST", inf1, inf2, inf3, best_time_seconds);
 		cout << "Best result: spread_before=" << inf1 << " spread_after=" << inf2 << " saved=" << inf3 << endl;
 
 		// Output separate lower bound result
@@ -239,7 +299,7 @@ public:
 			g.Delete_Node(g.LB_seedSet);
 			double inf2_lb = g.MC_based_estimate(g.rumorSet, 100000);
 			double inf3_lb = inf1 - inf2_lb;
-			of << "LB\t" << inf1 << "\t" << inf2_lb << "\t" << inf3_lb << "\t" << (double)interval.count() << endl;
+			write_result_row(of, arg, "LB", inf1, inf2_lb, inf3_lb, lb_time_seconds);
 			cout << "Lower bound: spread_after=" << inf2_lb << " saved=" << inf3_lb << endl;
 		}
 
@@ -249,7 +309,7 @@ public:
 			g.Delete_Node(g.UB_seedSet);
 			double inf2_ub = g.MC_based_estimate(g.rumorSet, 100000);
 			double inf3_ub = inf1 - inf2_ub;
-			of << "UB\t" << inf1 << "\t" << inf2_ub << "\t" << inf3_ub << "\t" << (double)interval.count() << endl;
+			write_result_row(of, arg, "UB", inf1, inf2_ub, inf3_ub, ub_time_seconds, format_ratio(g.last_ub_approx_ratio));
 			cout << "Upper bound: spread_after=" << inf2_ub << " saved=" << inf3_ub << endl;
 		}
 
@@ -259,7 +319,7 @@ public:
 			g.Delete_Node(g.Or_seedSet);
 			double inf2_or = g.MC_based_estimate(g.rumorSet, 100000);
 			double inf3_or = inf1 - inf2_or;
-			of << "OR\t" << inf1 << "\t" << inf2_or << "\t" << inf3_or << "\t" << (double)interval.count() << endl;
+			write_result_row(of, arg, "OR", inf1, inf2_or, inf3_or, or_time_seconds);
 			cout << "Heuristic: spread_after=" << inf2_or << " saved=" << inf3_or << endl;
 		}
 
