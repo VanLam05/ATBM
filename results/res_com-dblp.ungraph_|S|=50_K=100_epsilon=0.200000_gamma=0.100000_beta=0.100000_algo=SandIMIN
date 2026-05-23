@@ -1,0 +1,9 @@
+algorithm	dataset	k	|S|	result_type	spread_before	spread_after	saved_nodes	time_seconds	approx_ratio	status
+SandIMIN	com-dblp.ungraph	100	50	BEST	2845.38	2485.36	360.02	2417.71	NA	OK
+SandIMIN	com-dblp.ungraph	100	50	LB	2845.38	2436	409.38	155.415	NA	OK
+SandIMIN	com-dblp.ungraph	100	50	UB	2845.38	2486	359.388	2315.89	0.218386	OK
+SandIMIN	com-dblp.ungraph	100	50	OR	2845.38	2514.93	330.457	0.000747583	NA	OK
+SandIMIN	com-dblp.ungraph	100	50	BEST	2846.17	2435.16	411.013	2842.41	NA	OK
+SandIMIN	com-dblp.ungraph	100	50	LB	2846.17	2434.28	411.89	168.999	NA	OK
+SandIMIN	com-dblp.ungraph	100	50	UB	2846.17	2475.12	371.057	2733.67	0.222500	OK
+SandIMIN	com-dblp.ungraph	100	50	OR	2846.17	2513.83	332.344	0.0119396	NA	OK

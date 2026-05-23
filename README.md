@@ -131,15 +131,45 @@ IMin hiện đọc trực tiếp dataset chung trong `datasets/`, không cần c
 mkdir -p results
 
 cd code/IMin/SandIMIN_code
-./IMIN -dataset ../../../datasets/email-EuAll.txt \
-  -k 100 \
-  -rumorNum 10 \
+./IMIN -dataset ../../../datasets/com-youtube.ungraph.txt \
+  -k 200 \
+  -rumorNum 50 \
   -algo SandIMIN \
   -epsilon 0.2 \
   -gamma 0.1 \
   -beta 0.1 \
-  -seedFile ../../../datasets/email-EuAll_seed_10.txt \
+  -seedFile ../../../datasets/com-youtube.ungraph_seed_10.txt \
   -outputDir ../../../results
+```
+
+```bash
+cd code/IMin/SandIMIN_code
+
+for run in {1..10}; do
+  for s in 10 20 30 40 50; do
+    ./IMIN -dataset ../../../datasets/com-dblp.ungraph.txt \
+      -k 100 \
+      -rumorNum $s \
+      -algo SandIMIN \
+      -epsilon 0.2 \
+      -gamma 0.1 \
+      -beta 0.1 \
+      -seedFile ../../../datasets/com-dblp.ungraph_seed_${s}.txt \
+      -outputDir ../../../results
+  done
+
+  for k in 200 300 400 500; do
+    ./IMIN -dataset ../../../datasets/com-dblp.ungraph.txt \
+      -k $k \
+      -rumorNum 10 \
+      -algo SandIMIN \
+      -epsilon 0.2 \
+      -gamma 0.1 \
+      -beta 0.1 \
+      -seedFile ../../../datasets/com-dblp.ungraph_seed_10.txt \
+      -outputDir ../../../results
+  done
+done
 ```
 
 Với lệnh trên, output được ghi vào:
