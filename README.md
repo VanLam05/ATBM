@@ -132,13 +132,13 @@ mkdir -p results
 
 cd code/IMin/SandIMIN_code
 ./IMIN -dataset ../../../datasets/com-youtube.ungraph.txt \
-  -k 200 \
+  -k 100 \
   -rumorNum 50 \
   -algo SandIMIN \
   -epsilon 0.2 \
   -gamma 0.1 \
   -beta 0.1 \
-  -seedFile ../../../datasets/com-youtube.ungraph_seed_10.txt \
+  -seedFile ../../../datasets/com-youtube.ungraph_seed_50.txt \
   -outputDir ../../../results
 ```
 

@@ -1,0 +1,5 @@
+algorithm	dataset	k	|S|	result_type	spread_before	spread_after	saved_nodes	time_seconds	approx_ratio	status
+SandIMIN	com-youtube.ungraph	500	10	BEST	24220.1	16010	8210.13	7448.58	NA	OK
+SandIMIN	com-youtube.ungraph	500	10	LB	24220.1	16013	8207.13	1019.25	NA	OK
+SandIMIN	com-youtube.ungraph	500	10	UB	24220.1	16893.8	7326.33	6984.33	0.252887	OK
+SandIMIN	com-youtube.ungraph	500	10	OR	24220.1	17478.2	6741.93	0.0170821	NA	OK
